@@ -88,12 +88,19 @@ if {$need_pcie == "x7_gen3x8"} {
 
 }
 
-proc create_pcie_sv_hip_ast {mode} {
+proc create_pcie_sv_hip_ast {core_version pcie_version} {
     global boardname
-    set pcieversion {2.1}
+    set pcieversion {$pcie_version}
+    if {$pcie_version == "2.1"} {
+        set lane_rate "Gen2 (5.0 Gbps)"
+        set ast_width "Avalon-ST 128-bit"
+    } elseif {$pcie_version == "3.0"} {
+        set lane_rate "Gen3 (8.0 Gbps)"
+        set ast_width "Avalon-ST 256-bit"
+    }
+
     set maxlinkwidth {x8}
     set core_name {altera_pcie_sv_hip_ast}
-    set core_version {14.0}
     set ip_name {altera_pcie_sv_hip_ast_wrapper}
 
     set vendor_id {0x1be7}
@@ -102,10 +109,10 @@ proc create_pcie_sv_hip_ast {mode} {
 
 	set params [ dict create ]
 	dict set params lane_mask_hwtcl                      $maxlinkwidth
-	dict set params gen123_lane_rate_mode_hwtcl          "Gen2 (5.0 Gbps)"
+	dict set params gen123_lane_rate_mode_hwtcl          $lane_rate
 	dict set params port_type_hwtcl                      "Native endpoint"
-	dict set params pcie_spec_version_hwtcl              $pcieversion
-	dict set params ast_width_hwtcl                      "Avalon-ST 128-bit"
+	dict set params pcie_spec_version_hwtcl              $pcie_version
+	dict set params ast_width_hwtcl                      $ast_width
 	dict set params rxbuffer_rxreq_hwtcl                 "Low"
 	dict set params pll_refclk_freq_hwtcl                "100 MHz"
 	dict set params set_pld_clk_x1_625MHz_hwtcl          0
@@ -190,59 +197,25 @@ proc create_pcie_sv_hip_ast {mode} {
 		lappend component_parameters --component-parameter=$item=$val
 	}
 
-    if { [string match "SIMULATION" $mode]} {
-        connectal_altera_simu_ip $core_name $core_version $ip_name $component_parameters
-    } else {
-        connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
-    }
+    connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
 }
 
-proc create_pcie_reconfig {mode} {
+proc create_pcie_reconfig {core_version pcie_version} {
     set core_name {altera_pcie_reconfig_driver}
-    set core_version {14.0}
     set ip_name {altera_pcie_reconfig_driver_wrapper}
+
+    if {$pcie_version == "2.1"} {
+        set lane_rate "Gen2 (5.0 Gbps)"
+        set ast_width "Avalon-ST 128-bit"
+    } elseif {$pcie_version == "3.0"} {
+        set lane_rate "Gen3 (8.0 Gbps)"
+        set ast_width "Avalon-ST 256-bit"
+    }
 
     set params [ dict create ]
 	dict set params INTENDED_DEVICE_FAMILY        "Stratix V"
-	dict set params gen123_lane_rate_mode_hwtcl   "Gen2 (5.0 Gbps)"
+	dict set params gen123_lane_rate_mode_hwtcl   $lane_rate
 	dict set params number_of_reconfig_interfaces 10
-
-	set component_parameters {}
-	foreach item [dict keys $params ] {
-		set val [dict get $params $item]
-		lappend component_parameters --component-parameter=$item=$val
-	}
-
-    if {[string match "SIMULATION" $mode]} {
-        connectal_altera_simu_ip $core_name $core_version $ip_name $component_parameters
-    } else {
-        connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
-    }
-}
-
-proc create_pcie_hip_ast_ed {} {
-    set core_name {altera_pcie_hip_ast_ed}
-    set core_version {14.0}
-    set ip_name {altera_pcie_hip_ast_ed}
-
-    set params [ dict create ]
-
-    dict set params device_family_hwtcl              "Stratix V"
-    dict set params lane_mask_hwtcl                  "x8"
-    dict set params gen123_lane_rate_mode_hwtcl      "Gen2 (5.0 Gbps)"
-    dict set params pld_clockrate_hwtcl              250000000
-    dict set params port_type_hwtcl                  "Native endpoint"
-    dict set params ast_width_hwtcl                  "Avalon-ST 128-bit"
-    dict set params extend_tag_field_hwtcl           32
-    dict set params max_payload_size_hwtcl           256
-    dict set params num_of_func_hwtcl                1
-    dict set params multiple_packets_per_cycle_hwtcl 0
-    dict set params port_width_be_hwtcl              16
-    dict set params port_width_data_hwtcl            128
-    dict set params avalon_waddr_hwltcl              12
-    dict set params check_bus_master_ena_hwtcl       1
-    dict set params check_rx_buffer_cpl_hwtcl        1
-    dict set params use_crc_forwarding_hwtcl         0
 
 	set component_parameters {}
 	foreach item [dict keys $params ] {
@@ -253,7 +226,7 @@ proc create_pcie_hip_ast_ed {} {
     connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
 }
 
-proc create_pcie_xcvr_reconfig {mode core_name core_version ip_name n_interface} {
+proc create_pcie_xcvr_reconfig {core_name core_version ip_name n_interface} {
  	set params [ dict create ]
 	dict set params number_of_reconfig_interfaces $n_interface
 	dict set params device_family                 "Stratix V"
@@ -274,18 +247,21 @@ proc create_pcie_xcvr_reconfig {mode core_name core_version ip_name n_interface}
 		set val [dict get $params $item]
 		lappend component_parameters --component-parameter=$item=$val
 	}
-    if {[string match "SIMULATION" $mode]} {
-        connectal_altera_simu_ip $core_name $core_version $ip_name $component_parameters
-    } else {
-        connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
-    }
+    connectal_altera_synth_ip $core_name $core_version $ip_name $component_parameters
 }
 
 if {$need_pcie == "s5_gen2x8"} {
-    create_pcie_sv_hip_ast SYNTHESIS
-    create_pcie_xcvr_reconfig SYNTHESIS alt_xcvr_reconfig 14.0 alt_xcvr_reconfig_wrapper 10
-    create_pcie_reconfig SYNTHESIS
-    create_pcie_hip_ast_ed
+    regexp {[\.0-9]+} $quartus(version) quartus_version
+    create_pcie_sv_hip_ast $quartus_version "2.1"
+    create_pcie_xcvr_reconfig alt_xcvr_reconfig $quartus_version alt_xcvr_reconfig_wrapper 10
+    create_pcie_reconfig $quartus_version "2.1"
+}
+
+if {$need_pcie == "s5_gen3x8"} {
+    regexp {[\.0-9]+} $quartus(version) quartus_version
+    create_pcie_sv_hip_ast $quartus_version "3.0"
+    create_pcie_xcvr_reconfig alt_xcvr_reconfig $quartus_version alt_xcvr_reconfig_wrapper 10
+    create_pcie_reconfig $quartus_version "3.0"
 }
 
 # Stratix IV PCIe requires use of Megawizard
