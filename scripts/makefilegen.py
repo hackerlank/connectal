@@ -138,7 +138,7 @@ hw/mkTop.bit: prepare_bin_target %(genxdc_dep)s fpgamake.mk
 	$(Q)mkdir -p hw
 	$(Q)$(MAKE) -f fpgamake.mk
 ifneq ($(XILINX),)
-	$(Q)rsync -rav --include="*/" --include="*.rpt" --exclude="*" Impl/ bin
+	$(Q)rsync -rav --include="*/" --include="*.txt" --exclude="*" Impl/ bin
 else ifneq ($(ALTERA),)
 	$(Q)cp -f $(MKTOP).sof bin
 endif
